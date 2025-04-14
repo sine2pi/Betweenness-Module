@@ -1,4 +1,5 @@
-### RoPE implementation with betweenness-based positional adjustments. Proof of concept + tests and working embeddings 
+### RoPE implementation with betweenness-based positional adjustments. 
+#### Proof of concept + tests and working embeddings 
   
   This approach measures the 'betweenness' of each token in continuous semantic space using geometric path comparisons to define betweennes
   and applying these relationships to adjust the underlying rotary embeddings, allowing the model to  develop a more interconnected understanding of token 
