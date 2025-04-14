@@ -7,14 +7,12 @@ from einops import rearrange
 
 class BetweennessRoPE(nn.Module):
     """
-
     Tests for a betweenness-based positional RoPE implementation.
     Graphs.
-
     This approach measures the 'betweenness' of each token in semantic space
     and adjusts its positional encoding accordingly.
-
-    Note: The 'compute_betweenness' method calculates scores based on the input 'x',  Q, and K and graphs are automatically created from this script...
+    Note: The 'compute_betweenness' method calculates scores based on the input 'x',  Q, 
+    and K and graphs are automatically created from this script...
     """
     def __init__(self, dim, max_seq_len=2048, adjustment_scale=0.1):
         super().__init__()
