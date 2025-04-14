@@ -5,3 +5,4 @@
   and applying these relationships to adjust the underlying rotary embeddings, allowing the model to  develop a more interconnected understanding of token 
   relationships.
 
+  Semantic-Geometric Position Adjustment, Path Comparison Method, Fractional Position Interpolation.
