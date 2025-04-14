@@ -26,7 +26,7 @@ if seq_len > 2:
         betweenness[:, i+1] += between_score
 ```
 
-This creates a sliding window of triplets exactly as you described: abc, bcd, cde, etc. Each token's betweenness is calculated based on how it mediates the relationship between its neighbors.
+This creates a sliding window of triplets: abc, bcd, cde, etc. Each token's betweenness is calculated based on how it mediates the relationship between its neighbors.
 
 ### Implicit Global Effects
 
