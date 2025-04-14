@@ -263,32 +263,81 @@ def test_betweenness_rope():
     seq_len = 10
     batch_size = 2
     max_seq_len_test = 20 # For RoPE module
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    x = torch.randn(batch_size, seq_len, dim)
+    x = torch.randn(batch_size, seq_len, dim).to(device)
 
-    # Test RoPE module components directly
-    rope_module = BetweennessRoPE(dim=dim_head, max_seq_len=max_seq_len_test)
+    # --- Test RoPE module components directly ---
+    print("--- Direct RoPE Module Test ---")
+    rope_module = BetweennessRoPE(dim=dim_head, max_seq_len=max_seq_len_test).to(device)
     # Reshape x to match expected input for compute_betweenness when called directly
+    # (B, S, D) -> (B, S, H, D_head)
     x_reshaped_for_rope = x.reshape(batch_size, seq_len, heads, dim_head)
-    betweenness = rope_module.compute_betweenness(x_reshaped_for_rope)
+    betweenness_direct = rope_module.compute_betweenness(x_reshaped_for_rope)
 
-    print(f"Direct Betweenness shape: {betweenness.shape}") # Expect (B, S, H)
-    print(f"Direct Betweenness scores (Batch 0): \n{betweenness[0]}")
+    print(f"Direct Betweenness shape: {betweenness_direct.shape}") # Expect (B, S, H)
+    print(f"Direct Betweenness scores (Batch 0, Head 0): \n{betweenness_direct[0, :, 0]}")
 
-    # Test Attention module which uses RoPE internally
-    attn = BetweennessAttention(dim=dim, heads=heads, dim_head=dim_head, rope_max_seq_len=max_seq_len_test)
+    # --- Test Attention module which uses RoPE internally ---
+    print("\n--- Attention Module Test ---")
+    attn = BetweennessAttention(dim=dim, heads=heads, dim_head=dim_head, rope_max_seq_len=max_seq_len_test).to(device)
+
+    # --- Manually perform Q/K projection and RoPE application for inspection ---
+    print("\n--- Manual Q/K RoPE Application within Attention Test ---")
+    attn._to_device(device) # Ensure frequencies are on the correct device
+
+    q = attn.q_proj(x).reshape(batch_size, seq_len, heads, dim_head)
+    k = attn.k_proj(x).reshape(batch_size, seq_len, heads, dim_head)
+    print(f"Original Q shape: {q.shape}") # Expect (B, S, H, D_head)
+    print(f"Original K shape: {k.shape}") # Expect (B, S, H, D_head)
+
+    # 1. Compute betweenness (based on Q, as in attn.forward)
+    betweenness_attn = attn.rope.compute_betweenness(q)
+    print(f"Attention Betweenness shape: {betweenness_attn.shape}") # Expect (B, S, H)
+    print(f"Attention Betweenness scores (Batch 0, Head 0): \n{betweenness_attn[0, :, 0]}")
+
+    # 2. Get precomputed frequencies for the current sequence length
+    current_freqs_cos = attn.freqs_cos[:, :seq_len, :, :]
+    current_freqs_sin = attn.freqs_sin[:, :seq_len, :, :]
+    print(f"Sliced Freqs Cos shape: {current_freqs_cos.shape}") # Expect (1, S, 1, D_head/2)
+
+    # 3. Apply RoPE using the computed betweenness and sliced frequencies
+    q_rope = attn.rope.apply_rope(q, current_freqs_cos, current_freqs_sin, betweenness_attn)
+    k_rope = attn.rope.apply_rope(k, current_freqs_cos, current_freqs_sin, betweenness_attn) # Reuse betweenness
+    print(f"Q after RoPE shape: {q_rope.shape}") # Expect (B, S, H, D_head)
+    print(f"K after RoPE shape: {k_rope.shape}") # Expect (B, S, H, D_head)
+
+    # Optional: Print some values to see the effect
+    print(f"Original Q (Batch 0, Pos 0, Head 0, First 5 vals): \n{q[0, 0, 0, :5]}")
+    print(f"RoPE Q (Batch 0, Pos 0, Head 0, First 5 vals): \n{q_rope[0, 0, 0, :5]}")
+    print(f"Original K (Batch 0, Pos 0, Head 0, First 5 vals): \n{k[0, 0, 0, :5]}")
+    print(f"RoPE K (Batch 0, Pos 0, Head 0, First 5 vals): \n{k_rope[0, 0, 0, :5]}")
+    # --- End Manual Q/K RoPE ---
+
+    # Run the full attention forward pass
     output = attn(x)
-
-    print(f"\nAttention Output shape: {output.shape}") # Expect (B, S, Dim)
+    print(f"\nAttention Final Output shape: {output.shape}") # Expect (B, S, Dim)
 
     # Visualize the betweenness calculated directly for the first batch item
-    mean_betweenness_scores = betweenness[0].mean(dim=-1).detach().cpu().numpy()
+    mean_betweenness_scores_direct = betweenness_direct[0].mean(dim=-1).detach().cpu().numpy()
 
-    plt.figure(figsize=(10, 5))
-    plt.bar(range(seq_len), mean_betweenness_scores)
-    plt.title("Mean Betweenness Scores Across Heads (Direct Calc, Batch 0)")
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 2, 1)
+    plt.bar(range(seq_len), mean_betweenness_scores_direct)
+    plt.title("Mean Betweenness (Direct Calc, B0)")
     plt.xlabel("Token Position")
-    plt.ylabel("Mean Betweenness Score")
+    plt.ylabel("Mean Score")
+
+    # Visualize the betweenness calculated inside attention for the first batch item
+    mean_betweenness_scores_attn = betweenness_attn[0].mean(dim=-1).detach().cpu().numpy()
+    plt.subplot(1, 2, 2)
+    plt.bar(range(seq_len), mean_betweenness_scores_attn)
+    plt.title("Mean Betweenness (Attention Calc on Q, B0)")
+    plt.xlabel("Token Position")
+    plt.ylabel("Mean Score")
+
+    plt.tight_layout()
     plt.show()
 
 
@@ -297,9 +346,10 @@ def test_synthetic_betweenness():
     dim = 64
     seq_len = 5
     max_seq_len_test = 10
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # Create synthetic data where token 1 is between 0&2, token 3 is between 2&4
-    x = torch.zeros(1, seq_len, dim)
+    x = torch.zeros(1, seq_len, dim).to(device)
     x[0, 0] = torch.tensor([1.0, 0.0, 0.0] + [0.0] * (dim - 3))
     x[0, 1] = torch.tensor([0.5, 0.5, 0.0] + [0.0] * (dim - 3)) # Midpoint of 0 and 2
     x[0, 2] = torch.tensor([0.0, 1.0, 0.0] + [0.0] * (dim - 3))
@@ -307,9 +357,10 @@ def test_synthetic_betweenness():
     x[0, 4] = torch.tensor([0.0, 0.0, 1.0] + [0.0] * (dim - 3))
 
     # Use RoPE module with identity projection for testing the core logic
-    rope = BetweennessRoPE(dim, max_seq_len=max_seq_len_test)
+    rope = BetweennessRoPE(dim, max_seq_len=max_seq_len_test).to(device)
     with torch.no_grad():
-        rope.content_proj.weight.copy_(torch.eye(dim))
+        # Ensure identity projection is on the correct device
+        rope.content_proj.weight.copy_(torch.eye(dim, device=device))
         rope.content_proj.bias.fill_(0.0)
 
     # Compute betweenness (input needs head dim if module expects 4D, add dummy head)
