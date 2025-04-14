@@ -1,4 +1,6 @@
 ### RoPE implementation with betweenness-based positional adjustments. 
+#### Idea was inspired by the concepts of betweenness, realtive locations, hilbert spaces, and the letter O.
+
 #### Proof of concept + tests and working embeddings 
   
   This approach measures the 'betweenness' of each token in continuous semantic space using geometric path comparisons to define betweennes
@@ -36,4 +38,15 @@ While the calculation only uses local triplets, the effects propagate more globa
 
 So while the betweenness measure itself is calculated locally, its effect on the transformer's behavior is more global through the adjusted RoPE positions.
 
-Semantic-Geometric Position Adjustment, Path Comparison Method, Fractional Position Interpolation.
+Content-aware positioning - Unlike standard positional encodings that are fixed regardless of content, this method adjusts positions based on semantic relationships between tokens
+
+Semantic structure awareness - The model can potentially learn to recognize important "bridge" tokens that connect ideas, which could be valuable for:
+
+Understanding complex semantic structures
+Identifying key tokens in long contexts
+Better preserving important relationships between distant tokens
+Learnable behavior - The betweenness_gate parameter allows the model to learn how much to rely on this information
+
+Minimal overhead - The implementation adds relatively little computational cost while potentially gaining meaningful semantic awareness
+
+The approach essentially adds a form of "semantic topology" to the transformer's representation space. In domains where the logical/semantic flow matters (like reasoning, code, complex explanations), this could help the model better understand how concepts are connected.
