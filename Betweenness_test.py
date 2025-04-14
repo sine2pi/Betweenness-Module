@@ -7,16 +7,14 @@ from einops import rearrange
 
 class BetweennessRoPE(nn.Module):
     """
-    RoPE implementation with betweenness-based positional adjustments.
+
+    Tests for a betweenness-based positional RoPE implementation.
+    Graphs.
 
     This approach measures the 'betweenness' of each token in semantic space
-    and adjusts its positional encoding accordingly, allowing the model to
-    develop a more interconnected understanding of token relationships.
+    and adjusts its positional encoding accordingly.
 
-    Note: The 'compute_betweenness' method calculates scores based on the input 'x'.
-          When used in attention, consider whether to compute based on original input, Q, or K.
-    Note: The 'apply_rope' method uses a loop, which might be a bottleneck for long sequences.
-          Vectorization using gather could improve performance but adds complexity.
+    Note: The 'compute_betweenness' method calculates scores based on the input 'x',  Q, and K and graphs are automatically created from this script...
     """
     def __init__(self, dim, max_seq_len=2048, adjustment_scale=0.1):
         super().__init__()
