@@ -108,3 +108,5 @@ Learnable behavior - The betweenness_gate parameter allows the model to learn ho
 Minimal overhead - The implementation adds relatively little computational cost while potentially gaining meaningful semantic awareness
 
 The approach essentially adds a form of "semantic topology" to the transformer's representation space. In domains where the logical/semantic flow matters (like reasoning, code, complex explanations), this could help the model better understand how concepts are connected.
+
+
