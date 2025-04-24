@@ -1,5 +1,43 @@
 ### decided to convert this idea to an attention bias for the moment
 
+```python
+
+class BetweennessModule(nn.Module):
+    def __init__(self, dim, adjustment_scale=0.1, window_size=10):
+        super().__init__()
+        self.dim = dim
+        self.adjustment_scale = adjustment_scale
+        self.content_proj = nn.Linear(dim, dim)
+        self.betweenness_gate = nn.Parameter(torch.ones(1) * 0.5)
+        self.window_size = window_size
+
+    def compute_betweenness(self, x):
+        batch, seq_len, dim = x.shape
+        content = self.content_proj(x)
+        device = x.device
+        window = self.window_size
+
+        betweenness = torch.zeros(batch, seq_len, device=device)
+
+        for offset in range(1, window + 1):
+            i = torch.arange(seq_len - 2 * offset, device=device)
+            j = i + offset
+            k = i + 2 * offset
+           
+            c_i = content[:, i, :]
+            c_j = content[:, j, :]
+            c_k = content[:, k, :]
+
+            direct = torch.norm(c_i - c_k, dim=-1)
+            path = torch.norm(c_i - c_j, dim=-1) + torch.norm(c_j - c_k, dim=-1)
+            between_score = torch.relu(1.0 - (path - direct) / torch.clamp(direct, min=1e-6))
+
+            betweenness[:, j] += between_score
+
+        betweenness = betweenness / window
+        return betweenness
+```
+
 #### RoPE implementation with betweenness-based positional adjustments. 
 #### Idea was inspired by the concepts of betweenness, realtive locations, hilbert spaces, and the letter O.
 
