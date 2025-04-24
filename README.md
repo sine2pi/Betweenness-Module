@@ -1,4 +1,4 @@
-### removed the rope.. use directly in encoder
+### For testing
 
 ```python
 
