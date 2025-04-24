@@ -1,4 +1,6 @@
-### RoPE implementation with betweenness-based positional adjustments. 
+### decided to convert this idea to an attention bias for the moment
+
+#### RoPE implementation with betweenness-based positional adjustments. 
 #### Idea was inspired by the concepts of betweenness, realtive locations, hilbert spaces, and the letter O.
 
 #### Proof of concept + tests and working embeddings 
