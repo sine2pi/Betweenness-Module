@@ -1,9 +1,9 @@
-### decided to convert this idea to an attention bias for the moment
+### removed the rope
 
 ```python
 
 
-class BetweennessModule(nn.Module):
+class BetweennessModule(nn.Module): 
     def __init__(self, dim, adjustment_scale=1.0, window_size=10):
         super().__init__()
         self.dim = dim
