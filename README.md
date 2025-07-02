@@ -1,4 +1,4 @@
-
+```python
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -368,3 +368,5 @@ def apply_to_rope(rope_func, x, positions, betweenness_module):
     adjustments = betweenness_module.get_position_adjustments(x)
     adjusted_positions = positions + adjustments
     return rope_func(x, adjusted_positions)
+
+```
